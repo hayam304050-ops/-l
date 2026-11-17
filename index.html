@@ -1,0 +1,2463 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>بستان التفاح - Idgham Orchard</title>
+  <!-- Google Fonts for authentic readable Quranic script & friendly UI typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@700&family=Cairo:wght@600;700;800;900&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sky-top: #7dd3fc;
+      --sky-bottom: #e0f2fe;
+      --grass-light: #86efac;
+      --grass-mid: #4ade80;
+      --grass-dark: #16a34a;
+      --wood-light: #d97706;
+      --wood-dark: #78350f;
+      --gold: #fbbf24;
+      --gold-glow: #fef08a;
+      --primary: #15803d;
+      --accent: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Cairo', 'Nunito', sans-serif;
+      background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 72%, var(--grass-mid) 72%, var(--grass-dark) 100%);
+      touch-action: none;
+    }
+
+    html[dir="ltr"] body {
+      font-family: 'Nunito', 'Cairo', sans-serif;
+    }
+
+    /* Fullscreen Responsive Canvas */
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    /* Top HUD Overlay */
+    .hud-bar {
+      position: fixed;
+      top: 10px;
+      left: 12px;
+      right: 12px;
+      z-index: 20;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      pointer-events: auto;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(8px);
+      border: 3px solid #fde68a;
+      border-radius: 999px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+      font-weight: 800;
+      color: #1e293b;
+      font-size: clamp(0.85rem, 2vw, 1.05rem);
+    }
+
+    .pill-gold {
+      background: linear-gradient(135deg, #fef9c3, #fde047);
+      border-color: #f59e0b;
+      color: #78350f;
+    }
+
+    .diff-pill-select {
+      cursor: pointer;
+      background: linear-gradient(180deg, #f0fdf4, #dcfce7);
+      border: 3px solid #22c55e;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-weight: 800;
+      font-size: clamp(0.8rem, 1.8vw, 0.95rem);
+      color: #14532d;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 0 #16a34a, 0 6px 12px rgba(0,0,0,0.12);
+      transition: transform 0.12s ease;
+      font-family: inherit;
+    }
+
+    .diff-pill-select:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #16a34a;
+    }
+
+    .btn-icon {
+      cursor: pointer;
+      background: linear-gradient(180deg, #ffffff, #f1f5f9);
+      border: 3px solid #cbd5e1;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-weight: 800;
+      font-size: clamp(0.82rem, 1.9vw, 0.98rem);
+      color: #0f172a;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 0 #94a3b8, 0 6px 12px rgba(0,0,0,0.15);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      font-family: inherit;
+    }
+
+    .btn-icon:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #94a3b8;
+    }
+
+    .hearts-container {
+      display: flex;
+      gap: 4px;
+      font-size: 1.25rem;
+    }
+
+    .heart {
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+    }
+
+    .heart.lost {
+      opacity: 0.25;
+      transform: scale(0.75) grayscale(1);
+    }
+
+    /* Progress Bar toward next Golden Juice (every 5 apples) */
+    .juice-meter {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .juice-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      border: 2px solid #cbd5e1;
+      transition: all 0.25s ease;
+    }
+
+    .juice-dot.filled {
+      background: radial-gradient(circle at 35% 35%, #fef08a, #f59e0b);
+      border-color: #b45309;
+      transform: scale(1.18);
+      box-shadow: 0 0 8px #fbbf24;
+    }
+
+    /* Floating Live Feedback Banner (Rule Explanation + Speech Display) */
+    #feedbackToast {
+      position: fixed;
+      top: 72px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-16px) scale(0.92);
+      z-index: 25;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+      max-width: 92vw;
+      text-align: center;
+    }
+
+    #feedbackToast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    .toast-card {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 22px;
+      padding: 10px 22px;
+      border: 4px solid #22c55e;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .toast-card.wrong {
+      border-color: #ef4444;
+      background: #fef2f2;
+    }
+
+    .toast-card.milestone {
+      border-color: #f59e0b;
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+      padding: 14px 28px;
+    }
+
+    .toast-word {
+      font-family: 'Amiri Quran', 'Amiri', serif;
+      font-size: clamp(1.55rem, 4vw, 2.2rem);
+      color: #0f172a;
+      line-height: 1.5;
+    }
+
+    .toast-badge {
+      font-size: clamp(0.85rem, 2.2vw, 1.05rem);
+      font-weight: 800;
+      padding: 2px 12px;
+      border-radius: 999px;
+      color: #fff;
+    }
+
+    .badge-ghunnah { background: #16a34a; }
+    .badge-noghunnah { background: #0284c7; }
+    .badge-wrong { background: #dc2626; }
+    .badge-gold { background: linear-gradient(90deg, #d97706, #f59e0b); }
+
+    /* Modal Screens (Start Screen, Rules Guide, Victory / Game Over) */
+    .overlay-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      background: rgba(15, 23, 42, 0.52);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      transition: opacity 0.3s ease;
+    }
+
+    .overlay-screen.hidden {
+      display: none;
+    }
+
+    .modal-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border: 5px solid #4ade80;
+      border-radius: 32px;
+      max-width: 640px;
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: clamp(18px, 4vw, 30px);
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+      text-align: center;
+      position: relative;
+    }
+
+    .modal-title {
+      font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+      font-weight: 900;
+      color: #14532d;
+      margin-bottom: 6px;
+      text-shadow: 0 2px 0 #bbf7d0;
+    }
+
+    .modal-subtitle {
+      font-size: clamp(0.95rem, 2.4vw, 1.15rem);
+      color: #475569;
+      font-weight: 700;
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    /* Tajweed Quick Legend Box */
+    .rule-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-bottom: 18px;
+      text-align: start;
+    }
+
+    .rule-box {
+      border-radius: 18px;
+      padding: 12px 14px;
+      border: 2px solid;
+    }
+
+    .rule-box.ghunnah {
+      background: #f0fdf4;
+      border-color: #86efac;
+    }
+
+    .rule-box.noghunnah {
+      background: #f0f9ff;
+      border-color: #7dd3fc;
+    }
+
+    .rule-box h4 {
+      font-size: 1rem;
+      font-weight: 900;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .letters-chip {
+      background: #fff;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-family: 'Amiri', serif;
+      font-size: 1.15rem;
+      border: 1.5px solid currentColor;
+    }
+
+    .rule-box p {
+      font-size: 0.86rem;
+      color: #334155;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+
+    /* Difficulty Selection Cards */
+    .difficulty-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 480px) {
+      .difficulty-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .guide-toggle-btn {
+      cursor: pointer;
+      background: #fefce8;
+      border: 2px dashed #eab308;
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: #854d0e;
+      margin-bottom: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .guide-toggle-btn:hover {
+      background: #fef08a;
+    }
+
+    .diff-btn {
+      cursor: pointer;
+      border-radius: 22px;
+      padding: 14px;
+      border: 3px solid #cbd5e1;
+      background: #ffffff;
+      transition: all 0.18s ease;
+      text-align: center;
+      font-family: inherit;
+      position: relative;
+    }
+
+    .diff-btn.selected {
+      border-color: #16a34a;
+      background: #f0fdf4;
+      box-shadow: 0 8px 20px rgba(22, 163, 74, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .diff-btn .diff-icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .diff-btn .diff-name {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: #0f172a;
+      display: block;
+    }
+
+    .diff-btn .diff-desc {
+      font-size: 0.82rem;
+      color: #475569;
+      font-weight: 700;
+      margin-top: 4px;
+      display: block;
+      line-height: 1.35;
+    }
+
+    /* Big Juicy CTA Button */
+    .cta-btn {
+      cursor: pointer;
+      width: 100%;
+      padding: 15px 24px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+      color: #ffffff;
+      font-family: inherit;
+      font-size: clamp(1.15rem, 3vw, 1.35rem);
+      font-weight: 900;
+      box-shadow: 0 6px 0 #14532d, 0 12px 24px rgba(21, 128, 61, 0.35);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .cta-btn:hover {
+      filter: brightness(1.05);
+    }
+
+    .cta-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 2px 0 #14532d;
+    }
+
+    /* Master Gardener Badge Styling */
+    .badge-showcase {
+      background: radial-gradient(circle, #fef9c3 0%, #fde047 65%, #f59e0b 100%);
+      border: 5px solid #b45309;
+      border-radius: 28px;
+      padding: 20px;
+      margin: 14px 0 18px;
+      box-shadow: 0 12px 30px rgba(245, 158, 11, 0.35);
+      position: relative;
+      animation: badgeFloat 2.8s ease-in-out infinite;
+    }
+
+    @keyframes badgeFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .badge-medal {
+      font-size: 3.6rem;
+      line-height: 1;
+      margin-bottom: 6px;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+    }
+
+    .badge-title-text {
+      font-size: clamp(1.25rem, 3.5vw, 1.65rem);
+      font-weight: 900;
+      color: #78350f;
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-around;
+      gap: 8px;
+      background: #f1f5f9;
+      border-radius: 18px;
+      padding: 12px;
+      margin-bottom: 18px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .stat-val {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #15803d;
+    }
+
+    .stat-lbl {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #64748b;
+    }
+
+    .end-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .secondary-btn {
+      cursor: pointer;
+      flex: 1;
+      min-width: 140px;
+      padding: 13px 18px;
+      border-radius: 999px;
+      border: 3px solid #f59e0b;
+      background: linear-gradient(180deg, #fef9c3 0%, #fde047 100%);
+      color: #78350f;
+      font-family: inherit;
+      font-size: clamp(0.95rem, 2.5vw, 1.1rem);
+      font-weight: 900;
+      box-shadow: 0 5px 0 #b45309;
+      transition: transform 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .secondary-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #b45309;
+    }
+
+    .controls-hint {
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: #64748b;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Heads-Up Display -->
+  <header class="hud-bar">
+    <div class="hud-group">
+      <!-- Score -->
+      <div class="pill">
+        <span>🍎</span>
+        <span id="hudScoreLabel">النقاط:</span>
+        <span id="scoreDisplay">0</span>
+        <span style="color:#94a3b8; font-size:0.85em;">/ <span id="targetDisplay">15</span></span>
+      </div>
+
+      <!-- Golden Juice 5-Apple Meter -->
+      <div class="pill pill-gold" title="Golden Apple Juice Progress">
+        <span id="juiceIcon">🧃</span>
+        <span id="juiceCountText" style="font-size:0.85em;">0/5</span>
+        <div class="juice-meter" id="juiceMeter">
+          <div class="juice-dot"></div>
+          <div class="juice-dot"></div>
+          <div class="juice-dot"></div>
+          <div class="juice-dot"></div>
+          <div class="juice-dot"></div>
+        </div>
+      </div>
+
+      <!-- Lives (3 Hearts) -->
+      <div class="pill">
+        <div class="hearts-container" id="heartsContainer">
+          <span class="heart">❤️</span>
+          <span class="heart">❤️</span>
+          <span class="heart">❤️</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud-group">
+      <!-- Quick Difficulty Switcher in Top HUD -->
+      <button id="hudDiffToggleBtn" class="diff-pill-select" aria-label="Switch Difficulty">
+        <span id="hudDiffIcon">🌱</span>
+        <span id="hudDiffLabel">البراعم</span>
+      </button>
+
+      <!-- Audio / Speech Mute Toggle -->
+      <button id="soundToggleBtn" class="btn-icon" aria-label="Toggle Sound">
+        <span id="soundIcon">🔊</span>
+        <span id="soundLabel">الصوت</span>
+      </button>
+
+      <!-- Instant AR / EN Language Toggle -->
+      <button id="langToggleBtn" class="btn-icon" aria-label="Switch Language">
+        <span>🌐</span>
+        <span id="langLabel">English</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Live Feedback Toast for Caught Apples & Golden Juice -->
+  <div id="feedbackToast">
+    <div id="toastCard" class="toast-card">
+      <div id="toastWord" class="toast-word">مَنْ يَقُولُ</div>
+      <div id="toastBadge" class="toast-badge badge-ghunnah">إدغام بغنة (يَنْمُو)</div>
+    </div>
+  </div>
+
+  <!-- Interactive Orchard Game Canvas -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- Start & Difficulty Selection Modal -->
+  <div id="startModal" class="overlay-screen">
+    <div class="modal-card">
+      <div style="font-size: 2.5rem; margin-bottom: 4px;">🌳🍎🧺</div>
+      <h1 id="startTitle" class="modal-title">بستان التفاح</h1>
+      <p id="startSubtitle" class="modal-subtitle">
+        التقط التفاحات التي تحمل أمثلة <strong>الإدغام</strong> للنون الساكنة والتنوين، وتجنب التفاحات التي بها دودة!
+      </p>
+
+      <!-- Collapsible Tajweed Quick Guide Toggle -->
+      <button type="button" id="toggleGuideBtn" class="guide-toggle-btn">
+        <span>📖</span>
+        <span id="guideToggleText">قواعد الإدغام (يَرْمَلُون) ▲</span>
+      </button>
+
+      <!-- Tajweed Educational Reference -->
+      <div id="ruleGridBox" class="rule-grid">
+        <div class="rule-box ghunnah">
+          <h4 style="color:#15803d;">
+            <span id="ruleGhunnahTitle">١. إدغام بغنة</span>
+            <span class="letters-chip" style="color:#15803d;">ي ن م و</span>
+          </h4>
+          <p id="ruleGhunnahDesc">
+            إدخال النون الساكنة أو التنوين في حروف (يَنْمُو) مع صوت غنة من الخيشوم بمقدار حركتين.
+          </p>
+        </div>
+        <div class="rule-box noghunnah">
+          <h4 style="color:#0369a1;">
+            <span id="ruleNoGhunnahTitle">٢. إدغام بغير غنة</span>
+            <span class="letters-chip" style="color:#0369a1;">ل ، ر</span>
+          </h4>
+          <p id="ruleNoGhunnahDesc">
+            إدخال النون الساكنة أو التنوين في حرفي (اللام والراء) إدغاماً كاملاً بدون غنة.
+          </p>
+        </div>
+      </div>
+
+      <!-- Difficulty Selector -->
+      <div class="difficulty-grid">
+        <button type="button" id="btnDiffBuds" class="diff-btn selected" data-diff="buds">
+          <span class="diff-icon">🌱</span>
+          <span id="budsName" class="diff-name">مستوى البراعم</span>
+          <span id="budsDesc" class="diff-desc">سقوط بطيء + تلوين موضع الإدغام بالأحمر وتمييز نوعه</span>
+        </button>
+
+        <button type="button" id="btnDiffPros" class="diff-btn" data-diff="pros">
+          <span class="diff-icon">🏆</span>
+          <span id="prosName" class="diff-name">مستوى المحترفين</span>
+          <span id="prosDesc" class="diff-desc">سقوط أسرع + نص قرآني موحد بدون تلوين مساعد</span>
+        </button>
+      </div>
+
+      <button type="button" id="startGameBtn" class="cta-btn">
+        <span>🎮</span>
+        <span id="startBtnText">ابدأ جمع التفاح!</span>
+      </button>
+
+      <div id="controlsHint" class="controls-hint">
+        حرّك السلة بالأسهم ⬅️ ➡️ أو الماوس 🖱️ أو اللمس 👆
+      </div>
+    </div>
+  </div>
+
+  <!-- End / Victory Modal with Master Gardener Badge -->
+  <div id="endModal" class="overlay-screen hidden">
+    <div class="modal-card">
+      <h2 id="endTitle" class="modal-title">ما شاء الله! أحسنت!</h2>
+      <p id="endSubtitle" class="modal-subtitle">لقد أتممت رحلة بستان الإدغام بنجاح!</p>
+
+      <div class="badge-showcase">
+        <div id="badgeMedal" class="badge-medal">🏅</div>
+        <div id="badgeTitle" class="badge-title-text">وسام البستاني الماهر</div>
+        <div id="badgeSub" style="font-weight:800; color:#92400e; margin-top:4px;">Master Gardener Badge</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-item">
+          <span id="statPoints" class="stat-val" style="color:#b45309;">150</span>
+          <span id="statPointsLbl" class="stat-lbl">مجموع النقاط</span>
+        </div>
+        <div class="stat-item">
+          <span id="statTotal" class="stat-val">15</span>
+          <span id="statTotalLbl" class="stat-lbl">تفاحة صحيحة</span>
+        </div>
+        <div class="stat-item">
+          <span id="statGhunnah" class="stat-val" style="color:#16a34a;">10</span>
+          <span id="statGhunnahLbl" class="stat-lbl">إدغام بغنة</span>
+        </div>
+        <div class="stat-item">
+          <span id="statNoGhunnah" class="stat-val" style="color:#0284c7;">5</span>
+          <span id="statNoGhunnahLbl" class="stat-lbl">بغير غنة</span>
+        </div>
+        <div class="stat-item">
+          <span id="statJuice" class="stat-val" style="color:#d97706;">3</span>
+          <span id="statJuiceLbl" class="stat-lbl">عصير ذهبي</span>
+        </div>
+      </div>
+
+      <div class="end-actions">
+        <button type="button" id="downloadBadgeBtn" class="secondary-btn">
+          <span>🖼️</span>
+          <span id="downloadBadgeText">حفظ الوسام</span>
+        </button>
+        <button type="button" id="restartBtn" class="cta-btn" style="flex:1.4; min-width:170px;">
+          <span>🔄</span>
+          <span id="restartBtnText">العب مجدداً</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * بستان التفاح - IDGHAM ORCHARD
+     * Complete Bilingual Educational Tajweed Game (Single-File GitHub Pages Ready)
+     * ============================================================================
+     */
+
+    // ----------------------------------------------------------------------------
+    // 1. BILINGUAL DICTIONARY (ARABIC RTL & ENGLISH LTR)
+    // ----------------------------------------------------------------------------
+    const I18N = {
+      ar: {
+        dir: 'rtl',
+        lang: 'ar',
+        toggleBtn: 'English',
+        soundOn: 'الصوت',
+        soundOff: 'صامت',
+        scoreLabel: 'النقاط:',
+        hudBuds: 'البراعم',
+        hudPros: 'المحترفين',
+        guideShow: 'قواعد الإدغام (يَرْمَلُون) ▼',
+        guideHide: 'قواعد الإدغام (يَرْمَلُون) ▲',
+        startTitle: 'بستان التفاح 🍎',
+        startSubtitle: 'التقط التفاحات التي تحمل أمثلة الإدغام للنون الساكنة والتنوين، وتجنب التفاحات التي بها دودة!',
+        ruleGhunnahTitle: '١. إدغام بغنة',
+        ruleGhunnahDesc: 'إدخال النون الساكنة أو التنوين في حروف (يَنْمُو) مع صوت غنة من الخيشوم بمقدار حركتين.',
+        ruleNoGhunnahTitle: '٢. إدغام بغير غنة',
+        ruleNoGhunnahDesc: 'إدخال النون الساكنة أو التنوين في حرفي (اللام والراء) إدغاماً كاملاً بدون غنة.',
+        budsName: 'مستوى البراعم 🌱',
+        budsDesc: 'سقوط بطيء + تلوين موضع الإدغام بالأحمر وتمييز نوعه',
+        prosName: 'مستوى المحترفين 🏆',
+        prosDesc: 'سقوط أسرع + نص قرآني موحد بدون تلوين مساعد',
+        startBtnText: 'ابدأ جمع التفاح!',
+        controlsHint: 'حرّك السلة بالأسهم ⬅️ ➡️ أو الماوس 🖱️ أو اللمس 👆',
+        tagGhunnah: 'بغنة (ينمو)',
+        tagNoGhunnah: 'بغير غنة (ل/ر)',
+        toastGhunnah: 'إدغام بغنة (حروف يَنْمُو) ✨',
+        toastNoGhunnah: 'إدغام بغير غنة (اللام أو الراء) ✨',
+        toastWrongPrefix: 'انتبه! ليست إدغاماً: ',
+        goldenMilestoneTitle: '🧃 عصير التفاح الذهبي! (+50 نقطة) 🧃',
+        goldenMilestoneSub: 'رائع! جمعت ٥ تفاحات متتالية وامتلأت السلة بالعصير الذهبي!',
+        winTitle: 'ما شاء الله! مبارك يا بطل!',
+        winSubtitle: 'أتممت قطف ١٥ تفاحة إدغام بإتقان ونجاح!',
+        gameOverTitle: 'حاول مرة أخرى يا بطل!',
+        gameOverSubtitle: 'انتهت القلوب! تذكر حروف الإدغام الستة (يَرْمَلُون) وتجنب التفاحات ذات الدودة.',
+        badgeWin: 'وسام البستاني الماهر 🏅',
+        badgeWinSub: 'أنت خبير في أحكام الإدغام!',
+        badgeTry: 'وسام البستاني المجتهد 🌱',
+        badgeTrySub: 'تدرب أكثر لتحصد الوسام الذهبي!',
+        statPointsLbl: 'مجموع النقاط',
+        statTotalLbl: 'تفاحة صحيحة',
+        statGhunnahLbl: 'إدغام بغنة',
+        statNoGhunnahLbl: 'بغير غنة',
+        statJuiceLbl: 'عصير ذهبي',
+        downloadBadgeText: 'حفظ الوسام',
+        restartBtnText: 'العب مجدداً',
+        speechGhunnah: 'إدغام بغنة',
+        speechNoGhunnah: 'إدغام بغير غنة',
+        speechWrong: 'حكم آخر، ليس إدغاماً'
+      },
+      en: {
+        dir: 'ltr',
+        lang: 'en',
+        toggleBtn: 'العربية',
+        soundOn: 'Sound',
+        soundOff: 'Muted',
+        scoreLabel: 'Score:',
+        hudBuds: 'Sprouts',
+        hudPros: 'Pros',
+        guideShow: 'Idgham Quick Guide (يَرْمَلُون) ▼',
+        guideHide: 'Idgham Quick Guide (يَرْمَلُون) ▲',
+        startTitle: 'Idgham Orchard 🍎',
+        startSubtitle: 'Catch apples with valid Tajweed Idgham examples (Noon Sakinah & Tanween) and avoid wormy apples!',
+        ruleGhunnahTitle: '1. With Ghunnah',
+        ruleGhunnahDesc: 'Merging Noon Sakinah or Tanween into (ي ن م و) with a 2-beat nasal Ghunnah sound.',
+        ruleNoGhunnahTitle: '2. Without Ghunnah',
+        ruleNoGhunnahDesc: 'Complete merging into (ل or ر) cleanly without nasalization (Ghunnah).',
+        budsName: 'Sprouts Level 🌱',
+        budsDesc: 'Slow fall + red highlighted Idgham letters & rule badge',
+        prosName: 'Pros Level 🏆',
+        prosDesc: 'Faster fall + plain Quranic script without color hints',
+        startBtnText: 'Start Picking Apples!',
+        controlsHint: 'Move basket with Arrow Keys ⬅️ ➡️, Mouse 🖱️, or Touch 👆',
+        tagGhunnah: 'With Ghunnah',
+        tagNoGhunnah: 'No Ghunnah',
+        toastGhunnah: 'Idgham WITH Ghunnah (يَنْمُو) ✨',
+        toastNoGhunnah: 'Idgham WITHOUT Ghunnah (ل / ر) ✨',
+        toastWrongPrefix: 'Oops! Not Idgham: ',
+        goldenMilestoneTitle: '🧃 Golden Apple Juice! (+50 pts) 🧃',
+        goldenMilestoneSub: 'Awesome! 5 valid apples collected — your basket turned into Golden Juice!',
+        winTitle: 'MashaAllah! Magnificent!',
+        winSubtitle: 'You mastered 15 Idgham examples in the orchard!',
+        gameOverTitle: 'Good Effort! Try Again!',
+        gameOverSubtitle: 'Out of hearts! Remember the 6 Idgham letters (يَرْمَلُون) and dodge wormy apples.',
+        badgeWin: 'Master Gardener Badge 🏅',
+        badgeWinSub: 'Certified Idgham Tajweed Champion!',
+        badgeTry: 'Apprentice Gardener Badge 🌱',
+        badgeTrySub: 'Keep practicing to earn the Gold Medal!',
+        statPointsLbl: 'Total Points',
+        statTotalLbl: 'Valid Apples',
+        statGhunnahLbl: 'With Ghunnah',
+        statNoGhunnahLbl: 'No Ghunnah',
+        statJuiceLbl: 'Golden Juices',
+        downloadBadgeText: 'Save Badge',
+        restartBtnText: 'Play Again',
+        speechGhunnah: 'Idgham with Ghunnah',
+        speechNoGhunnah: 'Idgham without Ghunnah',
+        speechWrong: 'Not Idgham'
+      }
+    };
+
+    // ----------------------------------------------------------------------------
+    // 2. CURATED QURANIC TAJWEED DATASET
+    // Segments allow highlighting the exact Noon Sakinah / Tanween + Idgham letter in Sprouts mode
+    // ----------------------------------------------------------------------------
+    const APPLE_EXAMPLES = [
+      // === VALID: IDGHAM WITH GHUNNAH (ي، ن، م، و) ===
+      {
+        text: 'مَنْ يَقُولُ',
+        spoken: 'مَن يَقُولُ',
+        segments: [{ t: 'مَ', h: false }, { t: 'نْ يَ', h: true }, { t: 'قُولُ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'red'
+      },
+      {
+        text: 'مِنْ وَلِيٍّ',
+        spoken: 'مِن وَلِيٍّ',
+        segments: [{ t: 'مِ', h: false }, { t: 'نْ وَ', h: true }, { t: 'لِيٍّ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'green'
+      },
+      {
+        text: 'مِنْ نِعْمَةٍ',
+        spoken: 'مِن نِعْمَةٍ',
+        segments: [{ t: 'مِ', h: false }, { t: 'نْ نِ', h: true }, { t: 'عْمَةٍ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'red'
+      },
+      {
+        text: 'مَاءً مَّهيناً',
+        spoken: 'مَاءً مَهِيناً',
+        segments: [{ t: 'مَا', h: false }, { t: 'ءً مَّ', h: true }, { t: 'هيناً', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'green'
+      },
+      {
+        text: 'يَوْمَئِذٍ نَاعِمَةٌ',
+        spoken: 'يَوْمَئِذٍ نَاعِمَةٌ',
+        segments: [{ t: 'يَوْمَئِ', h: false }, { t: 'ذٍ نَ', h: true }, { t: 'اعِمَةٌ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'red'
+      },
+      {
+        text: 'وُجُوهٌ يَوْمَئِذٍ',
+        spoken: 'وُجُوهٌ يَوْمَئِذٍ',
+        segments: [{ t: 'وُجُو', h: false }, { t: 'هٌ يَ', h: true }, { t: 'وْمَئِذٍ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'green'
+      },
+      {
+        text: 'مِنْ مَاءٍ',
+        spoken: 'مِن مَاءٍ',
+        segments: [{ t: 'مِ', h: false }, { t: 'نْ مَ', h: true }, { t: 'اءٍ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'red'
+      },
+      {
+        text: 'خَيْراً يَرَهُ',
+        spoken: 'خَيْرًا يَرَهُ',
+        segments: [{ t: 'خَيْ', h: false }, { t: 'راً يَ', h: true }, { t: 'رَهُ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'green'
+      },
+      {
+        text: 'لِقَوْمٍ يُؤْمِنُونَ',
+        spoken: 'لِقَوْمٍ يُؤْمِنُونَ',
+        segments: [{ t: 'لِقَوْ', h: false }, { t: 'مٍ يُ', h: true }, { t: 'ؤْمِنُونَ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'red'
+      },
+      {
+        text: 'شَيْطَانٍ مَّرِيدٍ',
+        spoken: 'شَيْطَانٍ مَرِيدٍ',
+        segments: [{ t: 'شَيْطَا', h: false }, { t: 'نٍ مَّ', h: true }, { t: 'رِيدٍ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'green'
+      },
+      {
+        text: 'رَسُولٌ مِّنَ اللَّهِ',
+        spoken: 'رَسُولٌ مِنَ اللَّهِ',
+        segments: [{ t: 'رَسُو', h: false }, { t: 'لٌ مِّ', h: true }, { t: 'نَ اللَّهِ', h: false }],
+        valid: true,
+        type: 'ghunnah',
+        color: 'red'
+      },
+
+      // === VALID: IDGHAM WITHOUT GHUNNAH (ل، ر) ===
+      {
+        text: 'هُدىً لِلْمُتَّقين',
+        spoken: 'هُدًى لِلْمُتَّقِين',
+        segments: [{ t: 'هُ', h: false }, { t: 'دىً لِ', h: true }, { t: 'لْمُتَّقين', h: false }],
+        valid: true,
+        type: 'noghunnah',
+        color: 'red'
+      },
+      {
+        text: 'مِنْ رَبِّهِمْ',
+        spoken: 'مِن رَبِّهِمْ',
+        segments: [{ t: 'مِ', h: false }, { t: 'نْ رَ', h: true }, { t: 'بِّهِمْ', h: false }],
+        valid: true,
+        type: 'noghunnah',
+        color: 'green'
+      },
+      {
+        text: 'غَفُورٌ رَحِيمٌ',
+        spoken: 'غَفُورٌ رَحِيمٌ',
+        segments: [{ t: 'غَفُو', h: false }, { t: 'رٌ رَ', h: true }, { t: 'حِيمٌ', h: false }],
+        valid: true,
+        type: 'noghunnah',
+        color: 'red'
+      },
+      {
+        text: 'مَالاً لُّبَداً',
+        spoken: 'مَالًا لُبَدًا',
+        segments: [{ t: 'مَا', h: false }, { t: 'لاً لُّ', h: true }, { t: 'بَداً', h: false }],
+        valid: true,
+        type: 'noghunnah',
+        color: 'green'
+      },
+      {
+        text: 'ثَمَرَةٍ رِّزْقاً',
+        spoken: 'ثَمَرَةٍ رِزْقاً',
+        segments: [{ t: 'ثَمَرَ', h: false }, { t: 'ةٍ رِّ', h: true }, { t: 'زْقاً', h: false }],
+        valid: true,
+        type: 'noghunnah',
+        color: 'red'
+      },
+      {
+        text: 'خَيْرٌ لَّكُمْ',
+        spoken: 'خَيْرٌ لَكُمْ',
+        segments: [{ t: 'خَيْ', h: false }, { t: 'رٌ لَّ', h: true }, { t: 'كُمْ', h: false }],
+        valid: true,
+        type: 'noghunnah',
+        color: 'green'
+      },
+      {
+        text: 'أَنْ لَّنْ',
+        spoken: 'أَلَّن',
+        segments: [{ t: 'أَ', h: false }, { t: 'نْ لَّ', h: true }, { t: 'نْ', h: false }],
+        valid: true,
+        type: 'noghunnah',
+        color: 'red'
+      },
+
+      // === INVALID (WORMY APPLES): IZHAR, IQLAB, IKHFA ===
+      {
+        text: 'مَنْ آمَنَ',
+        spoken: 'مَنْ آمَنَ',
+        segments: [{ t: 'مَنْ آمَنَ', h: false }],
+        valid: false,
+        otherRuleAr: 'إظهار حلقي (أ)',
+        otherRuleEn: 'Izhar (أ)'
+      },
+      {
+        text: 'مِنْ بَعْدِ',
+        spoken: 'مِن بَعْدِ',
+        segments: [{ t: 'مِنْ بَعْدِ', h: false }],
+        valid: false,
+        otherRuleAr: 'إقلاب (ب)',
+        otherRuleEn: 'Iqlab (ب)'
+      },
+      {
+        text: 'الإِنْسَان',
+        spoken: 'الإِنسَان',
+        segments: [{ t: 'الإِنْسَان', h: false }],
+        valid: false,
+        otherRuleAr: 'إخفاء حقيقي (س)',
+        otherRuleEn: 'Ikhfa (س)'
+      },
+      {
+        text: 'عَليمٌ حَكيم',
+        spoken: 'عَلِيمٌ حَكِيم',
+        segments: [{ t: 'عَليمٌ حَكيم', h: false }],
+        valid: false,
+        otherRuleAr: 'إظهار حلقي (ح)',
+        otherRuleEn: 'Izhar (ح)'
+      },
+      {
+        text: 'سَميعٌ بَصير',
+        spoken: 'سَمِيعٌ بَصِير',
+        segments: [{ t: 'سَميعٌ بَصير', h: false }],
+        valid: false,
+        otherRuleAr: 'إقلاب (ب)',
+        otherRuleEn: 'Iqlab (ب)'
+      },
+      {
+        text: 'ريحاً صَرْصَراً',
+        spoken: 'رِيحًا صَرْصَرًا',
+        segments: [{ t: 'ريحاً صَرْصَراً', h: false }],
+        valid: false,
+        otherRuleAr: 'إخفاء حقيقي (ص)',
+        otherRuleEn: 'Ikhfa (ص)'
+      },
+      {
+        text: 'كُفُواً أَحَدٌ',
+        spoken: 'كُفُوًا أَحَدٌ',
+        segments: [{ t: 'كُفُواً أَحَدٌ', h: false }],
+        valid: false,
+        otherRuleAr: 'إظهار حلقي (أ)',
+        otherRuleEn: 'Izhar (أ)'
+      },
+      {
+        text: 'أَنْعَمْتَ',
+        spoken: 'أَنْعَمْتَ',
+        segments: [{ t: 'أَنْعَمْتَ', h: false }],
+        valid: false,
+        otherRuleAr: 'إظهار حلقي (ع)',
+        otherRuleEn: 'Izhar (ع)'
+      },
+      {
+        text: 'مِنْ خَوْفٍ',
+        spoken: 'مِنْ خَوْفٍ',
+        segments: [{ t: 'مِنْ خَوْفٍ', h: false }],
+        valid: false,
+        otherRuleAr: 'إظهار حلقي (خ)',
+        otherRuleEn: 'Izhar (خ)'
+      },
+      {
+        text: 'يَنطِقُونَ',
+        spoken: 'يَنطِقُونَ',
+        segments: [{ t: 'يَنطِقُونَ', h: false }],
+        valid: false,
+        otherRuleAr: 'إخفاء حقيقي (ط)',
+        otherRuleEn: 'Ikhfa (ط)'
+      }
+    ];
+
+    // ----------------------------------------------------------------------------
+    // 3. WEB AUDIO API SYNTHESIZER & SPEECH SYNTHESIS ENGINE
+    // ----------------------------------------------------------------------------
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = false;
+        this.voices = [];
+        if ('speechSynthesis' in window) {
+          this.loadVoices();
+          window.speechSynthesis.onvoiceschanged = () => this.loadVoices();
+        }
+      }
+
+      loadVoices() {
+        try {
+          this.voices = window.speechSynthesis.getVoices() || [];
+        } catch (e) {
+          this.voices = [];
+        }
+      }
+
+      initAudio() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        if (this.muted && 'speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        }
+        return this.muted;
+      }
+
+      // Cheerful Pop + Applause Chime when catching a valid Idgham apple
+      playCatchSuccess() {
+        if (this.muted) return;
+        this.initAudio();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+
+        // 1. Bubble "Pop" sound
+        const popOsc = this.ctx.createOscillator();
+        const popGain = this.ctx.createGain();
+        popOsc.type = 'sine';
+        popOsc.frequency.setValueAtTime(340, now);
+        popOsc.frequency.exponentialRampToValueAtTime(880, now + 0.11);
+        popGain.gain.setValueAtTime(0.32, now);
+        popGain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+        popOsc.connect(popGain);
+        popGain.connect(this.ctx.destination);
+        popOsc.start(now);
+        popOsc.stop(now + 0.14);
+
+        // 2. Bright celebratory triad chime (C5 - E5 - G5)
+        const notes = [523.25, 659.25, 783.99, 1046.5];
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          const t = now + 0.06 + idx * 0.065;
+          osc.frequency.setValueAtTime(freq, t);
+          gain.gain.setValueAtTime(0.18, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.36);
+        });
+
+        // 3. Soft applause burst using filtered noise bursts
+        this.playApplauseBurst(now + 0.08, 0.55);
+      }
+
+      playApplauseBurst(startTime, duration) {
+        if (!this.ctx) return;
+        const sampleRate = this.ctx.sampleRate;
+        const length = Math.floor(sampleRate * duration);
+        const buffer = this.ctx.createBuffer(1, length, sampleRate);
+        const data = buffer.getChannelData(0);
+
+        for (let i = 0; i < length; i++) {
+          const env = Math.sin((i / length) * Math.PI);
+          // Rapid claps modulation
+          const clapMod = Math.abs(Math.sin(i * 0.0035)) > 0.45 ? 1 : 0.25;
+          data[i] = (Math.random() * 2 - 1) * env * clapMod * 0.22;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1400;
+        filter.Q.value = 0.9;
+
+        noise.connect(filter);
+        filter.connect(this.ctx.destination);
+        noise.start(startTime);
+      }
+
+      // Funny cartoon "Boing" bounce sound for wormy apples
+      playBoing() {
+        if (this.muted) return;
+        this.initAudio();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const lfo = this.ctx.createOscillator();
+        const lfoGain = this.ctx.createGain();
+        const mainGain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(360, now + 0.16);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.45);
+
+        // Vibrato wobble
+        lfo.frequency.value = 26;
+        lfoGain.gain.value = 38;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 950;
+
+        mainGain.gain.setValueAtTime(0.28, now);
+        mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+
+        osc.connect(filter);
+        filter.connect(mainGain);
+        mainGain.connect(this.ctx.destination);
+
+        osc.start(now);
+        lfo.start(now);
+        osc.stop(now + 0.5);
+        lfo.stop(now + 0.5);
+      }
+
+      // Golden Juice 5-Apple Fanfare
+      playGoldenFanfare() {
+        if (this.muted) return;
+        this.initAudio();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const fanfare = [523.25, 659.25, 783.99, 1046.5, 1318.51];
+        fanfare.forEach((f, i) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          const t = now + i * 0.08;
+          osc.frequency.setValueAtTime(f, t);
+          gain.gain.setValueAtTime(0.24, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(t);
+          osc.stop(t + 0.56);
+        });
+        this.playApplauseBurst(now + 0.15, 0.95);
+      }
+
+      // SpeechSynthesis pronunciation of the Quranic word + Idgham classification
+      speakCatch(item, uiLang) {
+        if (this.muted || !('speechSynthesis' in window)) return;
+        try {
+          window.speechSynthesis.cancel();
+
+          const dict = I18N[uiLang];
+          const arVoice = this.voices.find(v => v.lang && v.lang.toLowerCase().startsWith('ar'));
+          const enVoice = this.voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+
+          // Utterance 1: Always pronounce the Quranic Arabic phrase clearly in Arabic
+          const uWord = new SpeechSynthesisUtterance(item.spoken || item.text);
+          uWord.lang = 'ar-SA';
+          if (arVoice) uWord.voice = arVoice;
+          uWord.rate = 0.88;
+          uWord.pitch = 1.08;
+
+          // Utterance 2: Announce the Tajweed rule in the active UI language
+          let ruleText = '';
+          if (item.valid) {
+            ruleText = item.type === 'ghunnah' ? dict.speechGhunnah : dict.speechNoGhunnah;
+          } else {
+            ruleText = dict.speechWrong;
+          }
+
+          const uRule = new SpeechSynthesisUtterance(ruleText);
+          if (uiLang === 'ar') {
+            uRule.lang = 'ar-SA';
+            if (arVoice) uRule.voice = arVoice;
+          } else {
+            uRule.lang = 'en-US';
+            if (enVoice) uRule.voice = enVoice;
+          }
+          uRule.rate = 0.98;
+          uRule.pitch = 1.1;
+
+          window.speechSynthesis.speak(uWord);
+          window.speechSynthesis.speak(uRule);
+        } catch (err) {
+          // Graceful fallback if speech synthesis is blocked or unsupported
+        }
+      }
+    }
+
+    const sound = new SoundEngine();
+
+    // ----------------------------------------------------------------------------
+    // 4. GAME STATE & CONFIGURATION
+    // ----------------------------------------------------------------------------
+    const TARGET_APPLES = 15; // 3 Golden Juices (15 valid apples) wins the Master Gardener Badge!
+
+    const state = {
+      lang: 'ar',
+      difficulty: 'buds', // 'buds' | 'pros'
+      guideOpen: true,
+      running: false,
+      points: 0,
+      caughtCount: 0,
+      lives: 3,
+      ghunnahCount: 0,
+      noGhunnahCount: 0,
+      goldenJuices: 0,
+      goldenBasketTimer: 0, // Glows golden when 5 apples reached
+      basketShakeTimer: 0,
+      apples: [],
+      treeApples: [],
+      clouds: [],
+      flowers: [],
+      confetti: [],
+      floatingPopups: [],
+      spawnTimer: 0,
+      lastTime: 0,
+      sunAngle: 0,
+      basket: {
+        x: 0.5, // Normalized 0..1 screen width
+        targetX: 0.5,
+        width: 140,
+        height: 62
+      },
+      keys: { left: false, right: false }
+    };
+
+    // ----------------------------------------------------------------------------
+    // 5. DOM ELEMENTS & UI BINDINGS
+    // ----------------------------------------------------------------------------
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const startModal = document.getElementById('startModal');
+    const endModal = document.getElementById('endModal');
+    const feedbackToast = document.getElementById('feedbackToast');
+    const toastCard = document.getElementById('toastCard');
+    const toastWord = document.getElementById('toastWord');
+    const toastBadge = document.getElementById('toastBadge');
+    let toastTimeout = null;
+
+    function updateLanguageUI() {
+      const d = I18N[state.lang];
+      document.documentElement.dir = d.dir;
+      document.documentElement.lang = d.lang;
+
+      document.getElementById('langLabel').textContent = d.toggleBtn;
+      document.getElementById('soundLabel').textContent = sound.muted ? d.soundOff : d.soundOn;
+      document.getElementById('hudScoreLabel').textContent = d.scoreLabel;
+      document.getElementById('targetDisplay').textContent = TARGET_APPLES;
+
+      document.getElementById('hudDiffIcon').textContent = state.difficulty === 'buds' ? '🌱' : '🏆';
+      document.getElementById('hudDiffLabel').textContent = state.difficulty === 'buds' ? d.hudBuds : d.hudPros;
+
+      document.getElementById('guideToggleText').textContent = state.guideOpen ? d.guideHide : d.guideShow;
+      document.getElementById('startTitle').textContent = d.startTitle;
+      document.getElementById('startSubtitle').textContent = d.startSubtitle;
+      document.getElementById('ruleGhunnahTitle').textContent = d.ruleGhunnahTitle;
+      document.getElementById('ruleGhunnahDesc').textContent = d.ruleGhunnahDesc;
+      document.getElementById('ruleNoGhunnahTitle').textContent = d.ruleNoGhunnahTitle;
+      document.getElementById('ruleNoGhunnahDesc').textContent = d.ruleNoGhunnahDesc;
+      document.getElementById('budsName').textContent = d.budsName;
+      document.getElementById('budsDesc').textContent = d.budsDesc;
+      document.getElementById('prosName').textContent = d.prosName;
+      document.getElementById('prosDesc').textContent = d.prosDesc;
+      document.getElementById('startBtnText').textContent = d.startBtnText;
+      document.getElementById('controlsHint').textContent = d.controlsHint;
+
+      document.getElementById('statPointsLbl').textContent = d.statPointsLbl;
+      document.getElementById('statTotalLbl').textContent = d.statTotalLbl;
+      document.getElementById('statGhunnahLbl').textContent = d.statGhunnahLbl;
+      document.getElementById('statNoGhunnahLbl').textContent = d.statNoGhunnahLbl;
+      document.getElementById('statJuiceLbl').textContent = d.statJuiceLbl;
+      document.getElementById('downloadBadgeText').textContent = d.downloadBadgeText;
+      document.getElementById('restartBtnText').textContent = d.restartBtnText;
+    }
+
+    function updateHUD() {
+      document.getElementById('scoreDisplay').textContent = state.caughtCount;
+
+      // Update Hearts
+      const hearts = document.querySelectorAll('#heartsContainer .heart');
+      hearts.forEach((h, idx) => {
+        if (idx < state.lives) {
+          h.classList.remove('lost');
+        } else {
+          h.classList.add('lost');
+        }
+      });
+
+      // Update 5-Apple Golden Juice Progress Dots
+      const mod = state.caughtCount % 5;
+      const filledCount = (state.caughtCount > 0 && mod === 0 && state.goldenBasketTimer > 0) ? 5 : mod;
+      document.getElementById('juiceCountText').textContent = `${filledCount}/5`;
+      const dots = document.querySelectorAll('#juiceMeter .juice-dot');
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('filled', idx < filledCount);
+      });
+    }
+
+    function showToast(word, badgeText, styleClass, duration = 2200) {
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastCard.className = 'toast-card ' + (styleClass === 'badge-wrong' ? 'wrong' : styleClass === 'badge-gold' ? 'milestone' : '');
+      toastWord.textContent = word;
+      toastBadge.textContent = badgeText;
+      toastBadge.className = 'toast-badge ' + styleClass;
+      feedbackToast.classList.add('show');
+
+      toastTimeout = setTimeout(() => {
+        feedbackToast.classList.remove('show');
+      }, duration);
+    }
+
+    // Button Event Listeners
+    document.getElementById('langToggleBtn').addEventListener('click', () => {
+      state.lang = state.lang === 'ar' ? 'en' : 'ar';
+      updateLanguageUI();
+    });
+
+    document.getElementById('soundToggleBtn').addEventListener('click', () => {
+      const muted = sound.toggleMute();
+      document.getElementById('soundIcon').textContent = muted ? '🔇' : '🔊';
+      document.getElementById('soundLabel').textContent = muted ? I18N[state.lang].soundOff : I18N[state.lang].soundOn;
+    });
+
+    document.getElementById('hudDiffToggleBtn').addEventListener('click', () => {
+      state.difficulty = state.difficulty === 'buds' ? 'pros' : 'buds';
+      document.querySelectorAll('.diff-btn').forEach(b => {
+        b.classList.toggle('selected', b.dataset.diff === state.difficulty);
+      });
+      updateLanguageUI();
+    });
+
+    document.getElementById('toggleGuideBtn').addEventListener('click', () => {
+      state.guideOpen = !state.guideOpen;
+      document.getElementById('ruleGridBox').style.display = state.guideOpen ? 'grid' : 'none';
+      updateLanguageUI();
+    });
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        state.difficulty = btn.dataset.diff;
+        updateLanguageUI();
+      });
+    });
+
+    document.getElementById('startGameBtn').addEventListener('click', () => {
+      sound.initAudio();
+      startGame();
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', () => {
+      sound.initAudio();
+      startGame();
+    });
+
+    document.getElementById('downloadBadgeBtn').addEventListener('click', downloadBadgeImage);
+
+    // ----------------------------------------------------------------------------
+    // 6. RESPONSIVE CANVAS & ENVIRONMENT INITIALIZATION
+    // ----------------------------------------------------------------------------
+    let W = window.innerWidth;
+    let H = window.innerHeight;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    function resizeCanvas() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // Responsive basket width
+      state.basket.width = Math.max(115, Math.min(165, W * 0.24));
+      state.basket.height = state.basket.width * 0.44;
+      initScenery();
+    }
+
+    function initScenery() {
+      // Fluffy clouds
+      state.clouds = [
+        { x: W * 0.14, y: H * 0.13, scale: 0.9, speed: 12 },
+        { x: W * 0.52, y: H * 0.09, scale: 1.15, speed: 8 },
+        { x: W * 0.85, y: H * 0.16, scale: 0.8, speed: 15 }
+      ];
+
+      // Swaying meadow flowers
+      state.flowers = [];
+      const flowerColors = ['#f43f5e', '#facc15', '#a855f7', '#fb923c', '#38bdf8'];
+      const count = Math.max(10, Math.floor(W / 65));
+      for (let i = 0; i < count; i++) {
+        state.flowers.push({
+          x: (i + 0.5) * (W / count) + (Math.random() * 18 - 9),
+          y: H * (0.76 + Math.random() * 0.18),
+          color: flowerColors[i % flowerColors.length],
+          phase: Math.random() * Math.PI * 2,
+          size: 7 + Math.random() * 4
+        });
+      }
+
+      // Decorative apples hanging inside the tree canopy
+      state.treeApples = [];
+      const treeCx = W * 0.5;
+      const treeCy = Math.min(145, H * 0.21);
+      const canopyRx = Math.min(W * 0.44, 340);
+      const canopyRy = Math.min(115, H * 0.16);
+      for (let i = 0; i < 14; i++) {
+        const angle = (i / 14) * Math.PI * 2;
+        const dist = 0.35 + (i % 3) * 0.22;
+        state.treeApples.push({
+          x: treeCx + Math.cos(angle) * canopyRx * dist,
+          y: treeCy + Math.sin(angle) * canopyRy * dist,
+          color: i % 2 === 0 ? '#ef4444' : '#22c55e',
+          phase: i * 0.7
+        });
+      }
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    // ----------------------------------------------------------------------------
+    // 7. INPUT CONTROLS (KEYBOARD ARROWS, MOUSE, TOUCH)
+    // ----------------------------------------------------------------------------
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') state.keys.left = true;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') state.keys.right = true;
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') state.keys.left = false;
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') state.keys.right = false;
+    });
+
+    function handlePointerMove(clientX) {
+      if (!state.running) return;
+      const margin = state.basket.width * 0.55;
+      const clampedX = Math.max(margin, Math.min(W - margin, clientX));
+      state.basket.targetX = clampedX / W;
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      handlePointerMove(e.clientX);
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        handlePointerMove(e.touches[0].clientX);
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches && e.touches.length > 0) {
+        handlePointerMove(e.touches[0].clientX);
+      }
+    }, { passive: true });
+
+    // ----------------------------------------------------------------------------
+    // 8. GAME LOOP LOGIC (SPAWNING, COLLISIONS, MILESTONES)
+    // ----------------------------------------------------------------------------
+    function startGame() {
+      state.running = true;
+      state.points = 0;
+      state.caughtCount = 0;
+      state.lives = 3;
+      state.ghunnahCount = 0;
+      state.noGhunnahCount = 0;
+      state.goldenJuices = 0;
+      state.goldenBasketTimer = 0;
+      state.basketShakeTimer = 0;
+      state.apples = [];
+      state.confetti = [];
+      state.floatingPopups = [];
+      state.spawnTimer = 0.6;
+      state.basket.x = 0.5;
+      state.basket.targetX = 0.5;
+
+      startModal.classList.add('hidden');
+      endModal.classList.add('hidden');
+      feedbackToast.classList.remove('show');
+      updateHUD();
+    }
+
+    function spawnApple() {
+      // 72% chance for valid Idgham apple, 28% chance for wormy wrong apple
+      const wantValid = Math.random() < 0.72;
+      const pool = APPLE_EXAMPLES.filter(a => a.valid === wantValid);
+      const template = pool[Math.floor(Math.random() * pool.length)];
+
+      const radius = Math.max(40, Math.min(54, W * 0.085));
+      const spawnMinX = Math.max(radius + 16, W * 0.5 - Math.min(W * 0.4, 300));
+      const spawnMaxX = Math.min(W - radius - 16, W * 0.5 + Math.min(W * 0.4, 300));
+      const x = spawnMinX + Math.random() * Math.max(40, spawnMaxX - spawnMinX);
+
+      // Speed scaled by difficulty ('buds' = gentle slow, 'pros' = brisk)
+      const baseSpeed = state.difficulty === 'buds'
+        ? Math.max(95, H * 0.145)
+        : Math.max(165, H * 0.245);
+
+      state.apples.push({
+        ...template,
+        x,
+        y: Math.min(155, H * 0.22),
+        radius,
+        vy: baseSpeed * (0.92 + Math.random() * 0.18),
+        swayPhase: Math.random() * Math.PI * 2,
+        swayAmp: 14 + Math.random() * 12,
+        wormPhase: 0
+      });
+    }
+
+    function triggerConfetti(cx, cy, count = 75) {
+      const colors = ['#facc15', '#ef4444', '#22c55e', '#3b82f6', '#ec4899', '#f97316'];
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 120 + Math.random() * 340;
+        state.confetti.push({
+          x: cx,
+          y: cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 180,
+          size: 6 + Math.random() * 7,
+          color: colors[i % colors.length],
+          rot: Math.random() * Math.PI * 2,
+          vRot: (Math.random() - 0.5) * 10,
+          life: 2.2 + Math.random() * 1.1
+        });
+      }
+    }
+
+    function addFloatingScore(x, y, text, color) {
+      state.floatingPopups.push({
+        x,
+        y,
+        text,
+        color,
+        life: 1.15
+      });
+    }
+
+    function handleCatch(apple) {
+      const dict = I18N[state.lang];
+      const basketPx = state.basket.x * W;
+      const basketPy = H - 82;
+
+      if (apple.valid) {
+        // Valid Idgham Apple!
+        state.caughtCount += 1;
+        state.points += 10;
+        if (apple.type === 'ghunnah') state.ghunnahCount += 1;
+        else state.noGhunnahCount += 1;
+
+        sound.playCatchSuccess();
+        sound.speakCatch(apple, state.lang);
+
+        // Check if every 5th valid apple -> Golden Apple Juice Milestone!
+        if (state.caughtCount % 5 === 0) {
+          state.goldenJuices += 1;
+          state.points += 50; // Bonus +50 points for Golden Apple Juice!
+          state.goldenBasketTimer = 4.0; // Basket turns into sparkling Golden Juice!
+          sound.playGoldenFanfare();
+          triggerConfetti(basketPx, basketPy - 30, 95);
+          showToast(dict.goldenMilestoneTitle, dict.goldenMilestoneSub, 'badge-gold', 3200);
+          addFloatingScore(basketPx, basketPy - 50, '🧃 +50', '#d97706');
+        } else {
+          const badgeTxt = apple.type === 'ghunnah' ? dict.toastGhunnah : dict.toastNoGhunnah;
+          const badgeCls = apple.type === 'ghunnah' ? 'badge-ghunnah' : 'badge-noghunnah';
+          showToast(apple.text, badgeTxt, badgeCls, 2100);
+          addFloatingScore(basketPx, basketPy - 40, '+10 🍎', '#16a34a');
+        }
+
+        updateHUD();
+
+        // Check Victory Condition
+        if (state.caughtCount >= TARGET_APPLES) {
+          setTimeout(() => endGame(true), 950);
+        }
+      } else {
+        // Wormy Apple Caught!
+        state.lives = Math.max(0, state.lives - 1);
+        state.basketShakeTimer = 0.5;
+        sound.playBoing();
+        sound.speakCatch(apple, state.lang);
+
+        const ruleName = state.lang === 'ar' ? apple.otherRuleAr : apple.otherRuleEn;
+        showToast(apple.text, dict.toastWrongPrefix + ruleName, 'badge-wrong', 2400);
+        addFloatingScore(basketPx, basketPy - 40, '💔 -1', '#dc2626');
+        updateHUD();
+
+        if (state.lives <= 0) {
+          setTimeout(() => endGame(false), 750);
+        }
+      }
+    }
+
+    function endGame(isVictory) {
+      state.running = false;
+      const d = I18N[state.lang];
+
+      if (isVictory) {
+        sound.playGoldenFanfare();
+        triggerConfetti(W * 0.5, H * 0.4, 120);
+        document.getElementById('endTitle').textContent = d.winTitle;
+        document.getElementById('endSubtitle').textContent = d.winSubtitle;
+        document.getElementById('badgeMedal').textContent = '🏅';
+        document.getElementById('badgeTitle').textContent = d.badgeWin;
+        document.getElementById('badgeSub').textContent = d.badgeWinSub;
+      } else {
+        document.getElementById('endTitle').textContent = d.gameOverTitle;
+        document.getElementById('endSubtitle').textContent = d.gameOverSubtitle;
+        document.getElementById('badgeMedal').textContent = '🌱';
+        document.getElementById('badgeTitle').textContent = d.badgeTry;
+        document.getElementById('badgeSub').textContent = d.badgeTrySub;
+      }
+
+      document.getElementById('statPoints').textContent = state.points;
+      document.getElementById('statTotal').textContent = state.caughtCount;
+      document.getElementById('statGhunnah').textContent = state.ghunnahCount;
+      document.getElementById('statNoGhunnah').textContent = state.noGhunnahCount;
+      document.getElementById('statJuice').textContent = state.goldenJuices;
+
+      endModal.classList.remove('hidden');
+    }
+
+    function downloadBadgeImage() {
+      const off = document.createElement('canvas');
+      off.width = 720;
+      off.height = 460;
+      const c = off.getContext('2d');
+
+      // Background card
+      const bg = c.createLinearGradient(0, 0, 720, 460);
+      bg.addColorStop(0, '#fef9c3');
+      bg.addColorStop(0.5, '#fde047');
+      bg.addColorStop(1, '#f59e0b');
+      c.fillStyle = bg;
+      c.fillRect(0, 0, 720, 460);
+
+      // Inner white certificate panel
+      c.fillStyle = '#ffffff';
+      c.beginPath();
+      c.roundRect(26, 26, 668, 408, 28);
+      c.fill();
+      c.lineWidth = 6;
+      c.strokeStyle = '#15803d';
+      c.stroke();
+
+      c.textAlign = 'center';
+      c.fillStyle = '#14532d';
+      c.font = '900 32px Cairo, Nunito, sans-serif';
+      c.fillText('بستان التفاح - Idgham Orchard', 360, 82);
+
+      c.font = '72px serif';
+      c.fillText(state.caughtCount >= TARGET_APPLES ? '🏅' : '🌱', 360, 165);
+
+      c.fillStyle = '#92400e';
+      c.font = '900 30px Cairo, Nunito, sans-serif';
+      c.fillText('وسام البستاني الماهر | Master Gardener Badge', 360, 224);
+
+      c.fillStyle = '#334155';
+      c.font = '700 21px Cairo, Nunito, sans-serif';
+      c.fillText(
+        `Points: ${state.points}  •  Apples: ${state.caughtCount}/${TARGET_APPLES}  •  Golden Juice: ${state.goldenJuices}`,
+        360,
+        278
+      );
+      c.fillText(
+        `إدغام بغنة: ${state.ghunnahCount}   |   إدغام بغير غنة: ${state.noGhunnahCount}`,
+        360,
+        322
+      );
+
+      c.fillStyle = '#16a34a';
+      c.font = '800 18px Cairo, Nunito, sans-serif';
+      c.fillText('أحكام النون الساكنة والتنوين (يَرْمَلُون) - Tajweed Educational Game', 360, 385);
+
+      const link = document.createElement('a');
+      link.download = 'Idgham-Orchard-Badge.png';
+      link.href = off.toDataURL('image/png');
+      link.click();
+    }
+
+    function update(dt) {
+      state.sunAngle += dt * 0.45;
+
+      // Move Clouds
+      state.clouds.forEach(c => {
+        c.x += c.speed * dt;
+        if (c.x > W + 120) c.x = -120;
+      });
+
+      // Update Confetti
+      for (let i = state.confetti.length - 1; i >= 0; i--) {
+        const p = state.confetti[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 420 * dt; // Gravity
+        p.rot += p.vRot * dt;
+        p.life -= dt;
+        if (p.life <= 0) state.confetti.splice(i, 1);
+      }
+
+      // Update Floating Popups
+      for (let i = state.floatingPopups.length - 1; i >= 0; i--) {
+        const fp = state.floatingPopups[i];
+        fp.y -= 55 * dt;
+        fp.life -= dt;
+        if (fp.life <= 0) state.floatingPopups.splice(i, 1);
+      }
+
+      if (!state.running) return;
+
+      // Timers
+      if (state.goldenBasketTimer > 0) {
+        state.goldenBasketTimer = Math.max(0, state.goldenBasketTimer - dt);
+        if (state.goldenBasketTimer === 0) updateHUD();
+      }
+      if (state.basketShakeTimer > 0) {
+        state.basketShakeTimer = Math.max(0, state.basketShakeTimer - dt);
+      }
+
+      // Basket Keyboard Movement
+      const keySpeed = 0.85; // Fraction of screen width per second
+      if (state.keys.left) state.basket.targetX -= keySpeed * dt;
+      if (state.keys.right) state.basket.targetX += keySpeed * dt;
+
+      const minNorm = (state.basket.width * 0.55) / W;
+      state.basket.targetX = Math.max(minNorm, Math.min(1 - minNorm, state.basket.targetX));
+      state.basket.x += (state.basket.targetX - state.basket.x) * Math.min(1, dt * 16);
+
+      // Spawn Timer
+      state.spawnTimer -= dt;
+      if (state.spawnTimer <= 0) {
+        spawnApple();
+        state.spawnTimer = state.difficulty === 'buds' ? 2.15 : 1.45;
+      }
+
+      // Update Falling Apples & Check Basket Collision
+      const basketCx = state.basket.x * W;
+      const basketTopY = H - 96;
+      const basketHalfW = state.basket.width * 0.48;
+
+      for (let i = state.apples.length - 1; i >= 0; i--) {
+        const a = state.apples[i];
+        a.y += a.vy * dt;
+        a.swayPhase += dt * 2.4;
+        a.wormPhase += dt * 6;
+        const drawX = a.x + Math.sin(a.swayPhase) * a.swayAmp;
+
+        // Check catch inside basket mouth
+        if (
+          a.y + a.radius * 0.55 >= basketTopY &&
+          a.y - a.radius * 0.4 <= basketTopY + 38 &&
+          Math.abs(drawX - basketCx) <= basketHalfW + a.radius * 0.35
+        ) {
+          handleCatch(a);
+          state.apples.splice(i, 1);
+          continue;
+        }
+
+        // Remove if fallen below screen
+        if (a.y - a.radius > H + 20) {
+          state.apples.splice(i, 1);
+        }
+      }
+    }
+
+    // ----------------------------------------------------------------------------
+    // 9. CANVAS RENDERING (ORCHARD SCENERY, KIDS + BASKET, QURANIC APPLES)
+    // ----------------------------------------------------------------------------
+    function drawSun() {
+      const sunX = state.lang === 'ar' ? 76 : W - 76;
+      const sunY = 88;
+      const r = 36;
+
+      ctx.save();
+      ctx.translate(sunX, sunY);
+
+      // Rotating sun rays
+      ctx.save();
+      ctx.rotate(state.sunAngle);
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 12; i++) {
+        ctx.rotate(Math.PI / 6);
+        ctx.beginPath();
+        ctx.moveTo(r + 6, 0);
+        ctx.lineTo(r + 16, 0);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Sun body
+      const grad = ctx.createRadialGradient(-8, -8, 4, 0, 0, r);
+      grad.addColorStop(0, '#fef08a');
+      grad.addColorStop(1, '#facc15');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#eab308';
+      ctx.stroke();
+
+      // Cute smiling face
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.arc(-11, -5, 3.5, 0, Math.PI * 2);
+      ctx.arc(11, -5, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Rosy cheeks
+      ctx.fillStyle = 'rgba(244, 63, 94, 0.35)';
+      ctx.beginPath();
+      ctx.arc(-17, 4, 5, 0, Math.PI * 2);
+      ctx.arc(17, 4, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Smile
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.arc(0, 2, 11, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawClouds() {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.88)';
+      state.clouds.forEach(c => {
+        ctx.save();
+        ctx.translate(c.x, c.y);
+        ctx.scale(c.scale, c.scale);
+        ctx.beginPath();
+        ctx.arc(0, 0, 26, 0, Math.PI * 2);
+        ctx.arc(24, -6, 30, 0, Math.PI * 2);
+        ctx.arc(52, 2, 24, 0, Math.PI * 2);
+        ctx.arc(-22, 5, 20, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function drawOrchardLandscape() {
+      // Rolling green hills
+      ctx.fillStyle = '#86efac';
+      ctx.beginPath();
+      ctx.moveTo(0, H * 0.74);
+      ctx.quadraticCurveTo(W * 0.25, H * 0.67, W * 0.55, H * 0.73);
+      ctx.quadraticCurveTo(W * 0.82, H * 0.78, W, H * 0.70);
+      ctx.lineTo(W, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.fill();
+
+      // Foreground meadow
+      const grassGrad = ctx.createLinearGradient(0, H * 0.73, 0, H);
+      grassGrad.addColorStop(0, '#4ade80');
+      grassGrad.addColorStop(1, '#15803d');
+      ctx.fillStyle = grassGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, H * 0.76);
+      ctx.quadraticCurveTo(W * 0.5, H * 0.71, W, H * 0.76);
+      ctx.lineTo(W, H);
+      ctx.lineTo(0, H);
+      ctx.closePath();
+      ctx.fill();
+
+      // Swaying flowers
+      state.flowers.forEach(f => {
+        const sway = Math.sin(state.sunAngle * 2.2 + f.phase) * 3;
+        ctx.strokeStyle = '#15803d';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(f.x, f.y + 12);
+        ctx.lineTo(f.x + sway, f.y);
+        ctx.stroke();
+
+        ctx.fillStyle = f.color;
+        for (let p = 0; p < 5; p++) {
+          const ang = (p / 5) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.arc(f.x + sway + Math.cos(ang) * f.size * 0.55, f.y + Math.sin(ang) * f.size * 0.55, f.size * 0.45, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(f.x + sway, f.y, f.size * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawAppleTree() {
+      const cx = W * 0.5;
+      const trunkW = Math.min(110, W * 0.14);
+
+      // Sturdy brown trunk
+      const trunkGrad = ctx.createLinearGradient(cx - trunkW * 0.5, 0, cx + trunkW * 0.5, 0);
+      trunkGrad.addColorStop(0, '#78350f');
+      trunkGrad.addColorStop(0.5, '#92400e');
+      trunkGrad.addColorStop(1, '#451a03');
+      ctx.fillStyle = trunkGrad;
+      ctx.beginPath();
+      ctx.moveTo(cx - trunkW * 0.42, 120);
+      ctx.lineTo(cx + trunkW * 0.42, 120);
+      ctx.lineTo(cx + trunkW * 0.65, H * 0.76);
+      ctx.lineTo(cx - trunkW * 0.65, H * 0.76);
+      ctx.closePath();
+      ctx.fill();
+
+      // Lush overlapping canopy clouds at top
+      const canopyRx = Math.min(W * 0.48, 390);
+      const canopyRy = Math.min(130, H * 0.18);
+
+      const puffs = [
+        { dx: -canopyRx * 0.62, dy: 88, r: canopyRy * 0.75, c: '#15803d' },
+        { dx: canopyRx * 0.62, dy: 88, r: canopyRy * 0.75, c: '#15803d' },
+        { dx: -canopyRx * 0.32, dy: 72, r: canopyRy * 0.92, c: '#16a34a' },
+        { dx: canopyRx * 0.32, dy: 72, r: canopyRy * 0.92, c: '#16a34a' },
+        { dx: 0, dy: 64, r: canopyRy * 1.05, c: '#22c55e' }
+      ];
+
+      puffs.forEach(p => {
+        ctx.fillStyle = p.c;
+        ctx.beginPath();
+        ctx.arc(cx + p.dx, p.dy, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Decorative hanging mini apples on tree
+      state.treeApples.forEach(ta => {
+        const swing = Math.sin(state.sunAngle * 2 + ta.phase) * 2.5;
+        ctx.fillStyle = ta.color;
+        ctx.beginPath();
+        ctx.arc(ta.x + swing, ta.y, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.45)';
+        ctx.beginPath();
+        ctx.arc(ta.x + swing - 3, ta.y - 3, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawKidsAndBasket() {
+      const shake = state.basketShakeTimer > 0 ? Math.sin(state.basketShakeTimer * 55) * 9 : 0;
+      const cx = state.basket.x * W + shake;
+      const cy = H - 62;
+      const bw = state.basket.width;
+      const bh = state.basket.height;
+      const isGolden = state.goldenBasketTimer > 0;
+
+      ctx.save();
+
+      // --- Left Kid (Cartoon Boy in Blue Cap) ---
+      drawCartoonKid(cx - bw * 0.56, cy + 6, '#38bdf8', '#fde68a', false);
+
+      // --- Right Kid (Cartoon Girl with Pink Ribbon) ---
+      drawCartoonKid(cx + bw * 0.56, cy + 6, '#f472b6', '#fde68a', true);
+
+      // --- Wooden Basket (or Golden Apple Juice overflow!) ---
+      const topW = bw;
+      const botW = bw * 0.74;
+      const topY = cy - bh * 0.48;
+      const botY = cy + bh * 0.52;
+
+      // Golden Juice Aura when 5-apple milestone is active!
+      if (isGolden) {
+        ctx.save();
+        const pulse = 1 + Math.sin(state.sunAngle * 14) * 0.08;
+        const glow = ctx.createRadialGradient(cx, topY, 10, cx, topY, bw * 0.9 * pulse);
+        glow.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+        glow.addColorStop(0.6, 'rgba(251, 191, 36, 0.5)');
+        glow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, topY, bw * 0.9 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sparkling golden juice splash overflowing top of basket
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.ellipse(cx, topY, topW * 0.48, 16, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Floating Golden Juice Pitcher icon above the overflowing basket
+        ctx.font = '32px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('🧃✨', cx, topY - 18 + Math.sin(state.sunAngle * 10) * 4);
+        ctx.restore();
+      }
+
+      // Basket body gradient
+      const basketGrad = ctx.createLinearGradient(cx - topW * 0.5, topY, cx + topW * 0.5, botY);
+      if (isGolden) {
+        basketGrad.addColorStop(0, '#fde047');
+        basketGrad.addColorStop(0.5, '#f59e0b');
+        basketGrad.addColorStop(1, '#b45309');
+      } else {
+        basketGrad.addColorStop(0, '#d97706');
+        basketGrad.addColorStop(0.5, '#b45309');
+        basketGrad.addColorStop(1, '#78350f');
+      }
+
+      ctx.fillStyle = basketGrad;
+      ctx.beginPath();
+      ctx.moveTo(cx - topW * 0.5, topY);
+      ctx.lineTo(cx + topW * 0.5, topY);
+      ctx.lineTo(cx + botW * 0.5, botY);
+      ctx.quadraticCurveTo(cx, botY + 10, cx - botW * 0.5, botY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = isGolden ? '#fef08a' : '#451a03';
+      ctx.stroke();
+
+      // Woven basket crosshatch pattern
+      ctx.strokeStyle = isGolden ? 'rgba(255,255,255,0.45)' : 'rgba(69, 26, 3, 0.45)';
+      ctx.lineWidth = 2;
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(cx + i * (topW * 0.16), topY + 6);
+        ctx.lineTo(cx + i * (botW * 0.16), botY - 4);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(cx - topW * 0.44, (topY + botY) * 0.5);
+      ctx.lineTo(cx + topW * 0.44, (topY + botY) * 0.5);
+      ctx.stroke();
+
+      // Thick top rim
+      ctx.fillStyle = isGolden ? '#fef08a' : '#f59e0b';
+      ctx.beginPath();
+      ctx.roundRect(cx - topW * 0.54, topY - 6, topW * 1.08, 12, 6);
+      ctx.fill();
+      ctx.strokeStyle = isGolden ? '#d97706' : '#78350f';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Kids' little hands holding the basket handles
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.arc(cx - topW * 0.52, topY + 2, 7, 0, Math.PI * 2);
+      ctx.arc(cx + topW * 0.52, topY + 2, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#9a3412';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawCartoonKid(x, y, shirtColor, hatColor, isGirl) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Shirt / Torso
+      ctx.fillStyle = shirtColor;
+      ctx.beginPath();
+      ctx.roundRect(-14, 2, 28, 34, 10);
+      ctx.fill();
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Head
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.arc(0, -14, 17, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Hair / Hat
+      ctx.fillStyle = '#451a03';
+      ctx.beginPath();
+      ctx.arc(0, -17, 17, Math.PI, Math.PI * 2);
+      ctx.fill();
+
+      if (isGirl) {
+        // Cute pigtails + pink bow
+        ctx.beginPath();
+        ctx.arc(-17, -14, 6, 0, Math.PI * 2);
+        ctx.arc(17, -14, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ec4899';
+        ctx.beginPath();
+        ctx.arc(12, -26, 5, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        // Cute cap
+        ctx.fillStyle = '#2563eb';
+        ctx.beginPath();
+        ctx.arc(0, -19, 16, Math.PI, 0);
+        ctx.fill();
+      }
+
+      // Happy Eyes & Smile
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(-5, -14, 2.2, 0, Math.PI * 2);
+      ctx.arc(5, -14, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#9a3412';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, -10, 5, 0.1 * Math.PI, 0.9 * Math.PI);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function drawFallingApple(apple) {
+      const drawX = apple.x + Math.sin(apple.swayPhase) * apple.swayAmp;
+      const drawY = apple.y;
+      const r = apple.radius;
+
+      ctx.save();
+      ctx.translate(drawX, drawY);
+
+      // Drop shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+      ctx.beginPath();
+      ctx.ellipse(3, 6, r * 1.02, r * 0.95, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Brown stem
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 4.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.85);
+      ctx.quadraticCurveTo(4, -r * 1.25, 10, -r * 1.28);
+      ctx.stroke();
+
+      // Green leaf
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.ellipse(11, -r * 1.08, 11, 5.5, -0.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#15803d';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Apple Body (Shiny Red, Lush Green, or slightly bruised Wormy Apple)
+      const bodyGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r * 1.05);
+      if (!apple.valid) {
+        // Wormy apple (warm reddish-amber with bite/worm)
+        bodyGrad.addColorStop(0, '#fca5a5');
+        bodyGrad.addColorStop(0.55, '#dc2626');
+        bodyGrad.addColorStop(1, '#7f1d1d');
+      } else if (apple.color === 'green') {
+        bodyGrad.addColorStop(0, '#bbf7d0');
+        bodyGrad.addColorStop(0.55, '#22c55e');
+        bodyGrad.addColorStop(1, '#15803d');
+      } else {
+        bodyGrad.addColorStop(0, '#fecaca');
+        bodyGrad.addColorStop(0.55, '#ef4444');
+        bodyGrad.addColorStop(1, '#b91c1c');
+      }
+
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.82);
+      ctx.bezierCurveTo(r * 0.95, -r * 1.12, r * 1.22, r * 0.45, 0, r * 0.98);
+      ctx.bezierCurveTo(-r * 1.22, r * 0.45, -r * 0.95, -r * 1.12, 0, -r * 0.82);
+      ctx.fill();
+
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = apple.color === 'green' && apple.valid ? '#14532d' : '#7f1d1d';
+      ctx.stroke();
+
+      // Glossy specular highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.45, -r * 0.35, r * 0.16, r * 0.3, -0.45, 0, Math.PI * 2);
+      ctx.fill();
+
+      // High-contrast white pill label inside the apple for crisp Quranic diacritics (Tashkeel)
+      const pillW = r * 1.95;
+      const pillH = r * 0.76;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.beginPath();
+      ctx.roundRect(-pillW * 0.5, -pillH * 0.45, pillW, pillH, 14);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fde68a';
+      ctx.stroke();
+
+      // Render Quranic Arabic Text (with Red Highlight in 'buds' mode!)
+      drawAppleQuranicText(apple, 0, 3, r);
+
+      // In 'buds' mode: show small clear indicator badge under valid apples distinguishing Ghunnah vs No-Ghunnah
+      if (state.difficulty === 'buds' && apple.valid) {
+        const dict = I18N[state.lang];
+        const tag = apple.type === 'ghunnah' ? dict.tagGhunnah : dict.tagNoGhunnah;
+        const tagBg = apple.type === 'ghunnah' ? '#15803d' : '#0369a1';
+
+        ctx.fillStyle = tagBg;
+        ctx.beginPath();
+        ctx.roundRect(-r * 0.85, r * 0.44, r * 1.7, 20, 10);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 11px Cairo, Nunito, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(tag, 0, r * 0.44 + 10.5);
+      }
+
+      // If invalid apple: draw cute cartoon green worm peeking out!
+      // In Sprouts mode it's prominent; in Pros mode it peeks out subtly so players read the Tajweed rule
+      if (!apple.valid) {
+        const wormScale = state.difficulty === 'buds' ? 1.0 : 0.72;
+        drawCartoonWorm(r * 0.72, -r * 0.42, apple.wormPhase, wormScale);
+      }
+
+      ctx.restore();
+    }
+
+    function drawAppleQuranicText(apple, cx, cy, r) {
+      const fontSize = Math.max(20, Math.min(27, r * 0.52));
+      ctx.font = `700 ${fontSize}px "Amiri Quran", "Amiri", serif`;
+      ctx.textBaseline = 'middle';
+
+      // In Pros mode or invalid apples, draw clean uniform dark Quranic text
+      if (state.difficulty === 'pros' || !apple.valid) {
+        ctx.fillStyle = '#0f172a';
+        ctx.textAlign = 'center';
+        ctx.fillText(apple.text, cx, cy);
+        return;
+      }
+
+      // In Buds mode: render RTL segments so the Idgham letters glow bright red!
+      ctx.direction = 'rtl';
+      ctx.textAlign = 'right';
+
+      let totalW = 0;
+      const widths = apple.segments.map(seg => {
+        const w = ctx.measureText(seg.t).width;
+        totalW += w;
+        return w;
+      });
+
+      let cursorX = cx + totalW * 0.5;
+      apple.segments.forEach((seg, idx) => {
+        ctx.fillStyle = seg.h ? '#dc2626' : '#0f172a';
+        ctx.fillText(seg.t, cursorX, cy);
+        cursorX -= widths[idx];
+      });
+    }
+    function drawCartoonWorm(wx, wy, phase, scale = 1) {
+      ctx.save();
+      ctx.translate(wx, wy);
+      ctx.scale(scale, scale);
+      const wiggle = Math.sin(phase) * 3;
+
+      // Dark bite hole on apple
+      ctx.fillStyle = '#450a0a';
+      ctx.beginPath();
+      ctx.arc(-4, 4, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Segmented cute lime-green worm
+      const segs = [
+        { x: -2, y: 2, r: 6 },
+        { x: 4, y: -3 + wiggle * 0.4, r: 6.5 },
+        { x: 10, y: -9 + wiggle, r: 8 }
+      ];
+
+      segs.forEach((s, i) => {
+        ctx.fillStyle = i % 2 === 0 ? '#84cc16' : '#a3e635';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#365314';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      });
+
+      // Worm's big googly eyes
+      const head = segs[2];
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x - 2.5, head.y - 2, 3, 0, Math.PI * 2);
+      ctx.arc(head.x + 3.5, head.y - 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(head.x - 2, head.y - 2, 1.4, 0, Math.PI * 2);
+      ctx.arc(head.x + 4, head.y - 2, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawConfettiAndPopups() {
+      // Confetti particles
+      state.confetti.forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size * 0.5, -p.size * 0.3, p.size, p.size * 0.6);
+        ctx.restore();
+      });
+
+      // Floating +1 / -1 popups
+      state.floatingPopups.forEach(fp => {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, fp.life);
+        ctx.font = '900 22px Cairo, Nunito, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = fp.color;
+        ctx.lineWidth = 5;
+        ctx.strokeText(fp.text, fp.x, fp.y);
+        ctx.fillStyle = fp.color;
+        ctx.fillText(fp.text, fp.x, fp.y);
+        ctx.restore();
+      });
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, W, H);
+      drawClouds();
+      drawSun();
+      drawOrchardLandscape();
+      drawAppleTree();
+      drawKidsAndBasket();
+      state.apples.forEach(drawFallingApple);
+      drawConfettiAndPopups();
+    }
+
+    function gameLoop(timestamp) {
+      if (!state.lastTime) state.lastTime = timestamp;
+      const dt = Math.min(0.05, (timestamp - state.lastTime) / 1000);
+      state.lastTime = timestamp;
+
+      update(dt);
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Boot up UI & Start Animation Loop on Window Load
+    window.onload = function () {
+      updateLanguageUI();
+      updateHUD();
+      requestAnimationFrame(gameLoop);
+    };
+  </script>
+</body>
+</html>
